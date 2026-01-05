@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+<meta charset="UTF-8">
+<title>Usability Tool Dashboard</title>
+<style>
+/*body { font-family: Arial, sans-serif; margin: 30px; }*/
+/*input[type="text"] { width: 380px; padding: 6px; }*/
+/*button { padding: 6px 12px; margin-left: 6px; }*/
+/*table { border-collapse: collapse; margin-top: 10px; min-width: 420px; }*/
+/*th, td { border: 1px solid #444; padding: 6px 8px; font-size: 14px; }*/
+/*th { background:#f0f0f0; }*/
+/*.ok { color: #0a0; font-weight: 600; }*/
+/*.bad { color: #b00; font-weight: 600; }*/
+/*.msg { margin-top:10px; color:#555; }*/
+
+body { font-family: 'Times New Roman' , Tahoma , Geneva , Verdana , sans-serif; background-color:#f4f4f9 ; color: #333 ; margin: 0 ; padding: 20px; }
+.container {max-width: 900px;margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1)}
+h1,h2 {text-align: center; color: #2c3e50;}
+
+form {display: flex ; gap: 10px; margin-bottom: 30px; justify-content: center;}
+input[type="text"] {width: 70% ; padding: 12px; border: 1px solid #ddd ; border-radius: 4px ; font-size: 16px; }
+button {padding : 12px 24px ; background-color: #3498db; color: white ; border: none; border-radius: 4px ; cursor: pointer; font-weight: bold ; font-size: 16px}
+button:hover {background-color: #2980b9}
+.error_handling {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 20px;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+.metrics-container {display: grid; grid-template-columns: repeat(3 , 1fr); gap: 20px; margin-bottom: 30px}
+.metrics_box {background: #ecf0f1; padding: 20px ; text-align: center; border-radius: 6px; border-left: 5px solid #bdc3c7}
+.metric_value {font-size: 32px ; font-weight: bold ; color: #2c3e50 ; margin-bottom: 5px}
+.metric_label {font-size: 14px; color: #7f8c8d ; text-transform: uppercase ; letter-spacing: 1px;}
+
+.score_box{border-left-color: #2ecc71;}
+.eff_box {border-left-color: #f1c40f;}
+.time_box {border-left-color: #e67e22;}
+
+table {width: 100% ; border-collapse: collapse ; margin-top: 10px;}
+th, td {padding: 12px 15px ; border-bottom: 1px solid #ddd; text-align: left; }
+th{ background-color: #f8f9fa ; font-weight: 600;}
+
+.status_pass{color: #27ae60 ; font-weight: bold ; background: #e8f8f5 ; padding: 4px 8px ; border-radius: 4px; }
+.status_fail {color: #c0392b ; font-weight: bold ; background: #fdedec ; padding: 4px 8px ; border-radius: 4px;}
+
+.footer {margin-top: 40px ; text-align: center ; font-size: 12px ; color: #aaa;}
+
+
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Usability Heuristic Evaluator </h1>
+
+    <form method="post" >
+        <input type="text" name="website_url" placeholder="Enter Website URL" required>
+        <button type="submit">Run Analysis</button>
+
+    </form>
+
+    {% if summary %}
+
+    {% if summary.error %}
+    <div class="error_handling">
+         <h3>Analysis Failed</h3>
+    <p><strong>Error details: </strong> {{ summary.error }}</p>
+</div>
+    {% else %}
+
+
+    <div class="metrics-container">
+        <div class="metrics_box score_box">
+            <div class="metric_value">{{ (summary.metrics.usability_score * 100) | round(1)  }}%</div>
+            <div class="metric_label">Over all Usability Score</div>
+        </div>
+
+
+    <div class="metrics_box eff_box">
+        <div class = "metric_value">{{ summary.metrics.efficiency_score }}</div>
+        <div class = "metric_label"> Efficiency </div>
+    </div>
+
+
+<div class="metrics_box time_box">
+    <div class="metric_value"> {{ summary.metrics.time_taken_seconds  }}s </div>
+    <div class = "metric_label"> Execution Time </div>
+
+</div>
+    </div>
+    {% if pdf_link %}
+    <div style="text-align: center ; margin: 30px 0;">
+        <a href="{{ url_for('static' , filename=pdf_link) }}" target="_blank" style="text-decoration: none">
+           <button class="pdf_btn">
+               Download Detailed Pdf
+           </button>
+        </a>
+    </div>
+    {% endif %}
+    <h2> Severity Breakdown </h2>
+    <table>
+        <thead>
+        <tr>
+        <th> Heuristic Name </th>
+        <th> Metric </th>
+        <th>Severity Score </th>
+        <th> Status </th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for key, value in summary.severity_breakdown.items() %}
+        <tr>
+            <td><strong>{{ key.split('_')[0] }}</strong></td>
+            <td>
+                {% if 'H1_' in key %}Visibility of System Status
+                {% elif 'H2_' in key %}Match between System and Real World
+                {% elif 'H3_' in key %}User control and Freedom
+                {% elif 'H4_' in key %}Consistency and Standard
+                {% elif 'H5_' in key %}Error Prevention
+                {% elif 'H6_' in key %}Recognition then recall
+                {% elif 'H7_' in key %}Flexibility and Efficiency
+                {% elif 'H8_' in key %}Aesthetic and Minimalist Design
+                {% elif 'H9_' in key %}Error Recovery
+                {% elif 'H10_' in key %}Help and Documentation
+                {% endif %}
+            </td>
+
+            <td> {{ value }} / 4 </td>
+            <td>
+                {% if value == 0   %}
+                <span class="status_pass">Pass</span>
+                {% else %}
+                <span class="status_fail">Violation Found</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="footer">
+        Results are generated automatically
+    </div>
+
+     {% endif %}
+{% endif %}
+</div>
+
+
+
+
+
+
+
+<!--<h2>Enter Website URL</h2>-->
+<!--<form method="post">-->
+<!--<input type="text" name="website_url" placeholder="https://example.com" required>-->
+<!--<button type="submit">Evaluate</button>-->
+<!--</form>-->
+
+<!--{% if not h5_results and not h8_results %}-->
+<!--<div class="msg">Enter a URL and press Evaluate.</div>-->
+<!--{% endif %}-->
+
+<!--{% if h5_results %}-->
+<!--{% set H5 = h5_results.get("Hueristic5_voilation_summary", {}) %}-->
+<!--<h3>H5: Error Prevention – Summary</h3>-->
+<!--<table>-->
+<!--<tr><th>Check</th><th>Metric</th><th>Value</th></tr>-->
+
+<!--<tr><td>C1 – Missing ALT text</td><td>Images without ALT</td>-->
+<!--<td>{{ H5.get("C1 missing Alt", {}).get("missing_alt", 0) }}</td></tr>-->
+<!--<tr><td></td><td>Total images</td>-->
+<!--<td>{{ H5.get("C1 missing Alt", {}).get("total_images", 0) }}</td></tr>-->
+
+<!--<tr><td>C3 – Unclear link text</td><td>Links with vague/unclear text</td>-->
+<!--<td>{{ H5.get("C3 unclear text", {}).get("unclear_links", 0) }}</td></tr>-->
+<!--<tr><td></td><td>Total links</td>-->
+<!--<td>{{ H5.get("C3 unclear text", {}).get("total links ", 0) }}</td></tr>-->
+
+<!--<tr><td>C4 – Unlabelled inputs</td><td>Inputs without labels</td>-->
+<!--<td>{{ H5.get("C4 Unlabeled inputs", {}).get("missing_labels", 0) }}</td></tr>-->
+<!--<tr><td></td><td>Total input fields</td>-->
+<!--<td>{{ H5.get("C4 Unlabeled inputs", {}).get("total_fields", 0) }}</td></tr>-->
+
+<!--<tr><td>C5 – Forms without validation</td><td>Forms missing basic client-side checks</td>-->
+<!--<td>{{ H5.get("C5 forms without validation", {}).get("flagged_forms", 0) }}</td></tr>-->
+<!--<tr><td></td><td>Total forms</td>-->
+<!--<td>{{ H5.get("C5 forms without validation", {}).get("total_forms", 0) }}</td></tr>-->
+
+<!--<tr><td>C10 – HTML language</td><td>Language attribute present?</td>-->
+<!--{% set has_lang = H5.get("C10_Html_language", {}).get("has_lang", False) %}-->
+<!--<td>{% if has_lang %}<span class="ok">Yes</span>{% else %}-->
+<!--<span class="bad">No</span>{% endif %}</td></tr>-->
+<!--<tr><td></td><td>lang value</td>-->
+<!--<td>{{ H5.get("C10_Html_language", {}).get("lang_value", "-") }}</td></tr>-->
+<!--</table>-->
+
+<!--<h3>Binary Summary (for comparison with UNDP)</h3>-->
+<!--{% set H5BIN = H5.get("Binary Summary", {}) %}-->
+<!--<table>-->
+<!--<tr><th>Check</th><th>Binary value</th></tr>-->
+<!--<tr><td>C1 – Missing ALT</td><td>{{ H5BIN.get("C1", 0) }}</td></tr>-->
+<!--<tr><td>C3 – Unclear link text</td><td>{{ H5BIN.get("C3", 0) }}</td></tr>-->
+<!--<tr><td>C4 – Unlabelled inputs</td><td>{{ H5BIN.get("C4", 0) }}</td></tr>-->
+<!--<tr><td>C5 – Forms without validation</td><td>{{ H5BIN.get("C5", 0) }}</td></tr>-->
+<!--<tr><td>C10 – HTML language missing</td><td>{{ H5BIN.get("C10", 0) }}</td></tr>-->
+<!--</table>-->
+<!--{% endif %}-->
+
+<!--{% if h8_results %}-->
+<!--{% set H8BIN = (h8_results.get("H8_summary", {}) or {}).get("binary_summary", {}) %}-->
+<!--<h3>H8 – Aesthetic & Minimalist Design (Binary)</h3>-->
+<!--<table>-->
+<!--<tr><th>Check</th><th>Binary value</th></tr>-->
+<!--<tr><td>C1 – Visual Clutter</td><td>{{ H8BIN.get("C1_visual_clutter", 0) }}</td></tr>-->
+<!--<tr><td>C2 – Text Clutter</td><td>{{ H8BIN.get("C2_text_clutter", 0) }}</td></tr>-->
+<!--<tr><td>C3 – Style Clutter</td><td>{{ H8BIN.get("C3_style_clutter", 0) }}</td></tr>-->
+<!--</table>-->
+<!--{% endif %}-->
+
+</body>
+</html>
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--<meta charset="UTF-8">-->
+<!--<title>Website Usability Evaluator</title>-->
+<!--<style>-->
+<!--body { font-family: Arial, sans-serif; margin: 30px; }-->
+<!--form { margin-bottom: 20px; }-->
+<!--input[type="text"] { width: 380px; padding: 5px; }-->
+<!--button { padding: 5px 12px; margin-left: 5px; }-->
+
+<!--h1, h2, h3, h4 { font-weight: normal; }-->
+
+<!--.section { margin-top: 25px; }-->
+
+<!--table {-->
+<!--border-collapse: collapse;-->
+<!--margin-top: 8px;-->
+<!--min-width: 420px;-->
+<!--}-->
+<!--th, td {-->
+<!--border: 1px solid #444;-->
+<!--padding: 4px 8px;-->
+<!--font-size: 14px;-->
+<!--}-->
+<!--th { background-color: #f0f0f0; }-->
+
+<!--.samples-table { margin-top: 5px; margin-bottom: 15px; }-->
+
+<!--.badge-ok { color: green; font-weight: bold; }-->
+<!--.badge-warning { color: darkred; font-weight: bold; }-->
+<!--</style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<h2>Enter Website URL</h2>-->
+
+<!--<form method="post">-->
+<!--<input type="text" name="website_url" placeholder="https://example.com" required>-->
+<!--<button type="submit">Evaluate</button>-->
+<!--</form>-->
+
+<!--{% if result %}-->
+<!--{% set h5 = result["Hueristic5_voilation_summary"] %}-->
+
+<!--<div class="section">-->
+<!--<h3>H5: Error Prevention – Summary</h3>-->
+<!--<table>-->
+<!--<tr>-->
+<!--<th>Check</th>-->
+<!--<th>Metric</th>-->
+<!--<th>Value</th>-->
+<!--</tr>-->
+
+<!--&lt;!&ndash; C1 missing alt &ndash;&gt;-->
+<!--<tr>-->
+<!--<td>C1 – Missing ALT text</td>-->
+<!--<td>Images without ALT</td>-->
+<!--<td>{{ h5["C1 missing Alt"]["missing_alt"] }}</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td></td>-->
+<!--<td>Total images</td>-->
+<!--<td>{{ h5["C1 missing Alt"]["total_images"] }}</td>-->
+<!--</tr>-->
+
+<!--&lt;!&ndash; C3 unclear link text &ndash;&gt;-->
+<!--<tr>-->
+<!--<td>C3 – Unclear link text</td>-->
+<!--<td>Links with vague/unclear text</td>-->
+<!--<td>{{ h5["C3 unclear text"]["unclear_links"] }}</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td></td>-->
+<!--<td>Total links</td>-->
+<!--<td>{{ h5["C3 unclear text"]["total_links"] }}</td>-->
+<!--</tr>-->
+
+<!--&lt;!&ndash; C4 unlabelled inputs &ndash;&gt;-->
+<!--<tr>-->
+<!--<td>C4 – Unlabelled inputs</td>-->
+<!--<td>Inputs without labels</td>-->
+<!--<td>{{ h5["C4 Unlabeled inputs"]["missing_labels"] }}</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td></td>-->
+<!--<td>Total input fields</td>-->
+<!--<td>{{ h5["C4 Unlabeled inputs"]["total_fields"] }}</td>-->
+<!--</tr>-->
+
+<!--&lt;!&ndash; C5 forms without validation &ndash;&gt;-->
+<!--<tr>-->
+<!--<td>C5 – Forms without validation</td>-->
+<!--<td>Forms missing basic client-side checks</td>-->
+<!--<td>{{ h5["C5 forms without validation"]["flagged_forms"] }}</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td></td>-->
+<!--<td>Total forms</td>-->
+<!--<td>{{ h5["C5 forms without validation"]["total_forms"] }}</td>-->
+<!--</tr>-->
+
+<!--&lt;!&ndash; C10 html language &ndash;&gt;-->
+<!--<tr>-->
+<!--<td>C10 – HTML language</td>-->
+<!--<td>Language attribute present?</td>-->
+<!--<td>-->
+<!--{% if h5["C10_Html_language"]["has_lang"] %}-->
+<!--<span class="badge-ok">Yes</span>-->
+<!--{% else %}-->
+<!--<span class="badge-warning">No</span>-->
+<!--{% endif %}-->
+<!--</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td></td>-->
+<!--<td>lang value</td>-->
+<!--<td>{{ h5["C10_Html_language"]["lang_value"] or "-" }}</td>-->
+<!--</tr>-->
+<!--</table>-->
+<!--    <h3>Binary Summary (for comparison with UNDP)</h3>-->
+<!--<table border="1">-->
+<!--<tr>-->
+<!--<th>Check</th>-->
+<!--<th>Binary value</th>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td>C1 – Missing ALT</td>-->
+<!--<td>{{ h5["Binary Summary"]["C1"] }}</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td>C3 – Unclear link text</td>-->
+<!--<td>{{ h5["Binary Summary"]["C3"] }}</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td>C4 – Unlabelled inputs</td>-->
+<!--<td>{{ h5["Binary Summary"]["C4"] }}</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td>C5 – Forms without validation</td>-->
+<!--<td>{{ h5["Binary Summary"]["C5"] }}</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td>C10 – HTML language missing</td>-->
+<!--<td>{{ h5["Binary Summary"]["C10"] }}</td>-->
+<!--</tr>-->
+<!--</table>-->
+<!--</div>-->
+
+<!--<div class="section">-->
+<!--<h3>Details (sample issues)</h3>-->
+
+<!--&lt;!&ndash; C1 samples &ndash;&gt;-->
+<!--<h4>C1 – Images missing ALT (examples)</h4>-->
+<!--{% if h5["C1 missing Alt"]["samples"] %}-->
+<!--<table class="samples-table">-->
+<!--<tr>-->
+<!--<th>#</th>-->
+<!--<th>Image src (truncated)</th>-->
+<!--</tr>-->
+<!--{% for img in h5["C1 missing Alt"]["samples"] %}-->
+<!--<tr>-->
+<!--<td>{{ img.index }}</td>-->
+<!--<td>{{ img.src }}</td>-->
+<!--</tr>-->
+<!--{% endfor %}-->
+<!--</table>-->
+<!--{% else %}-->
+<!--<p>No images without ALT were found.</p>-->
+<!--{% endif %}-->
+
+<!--&lt;!&ndash; C3 samples &ndash;&gt;-->
+<!--<h4>C3 – Unclear link text (examples)</h4>-->
+<!--{% if h5["C3 unclear text"]["samples"] %}-->
+<!--<table class="samples-table">-->
+<!--<tr>-->
+<!--<th>Link text</th>-->
+<!--<th>Href (truncated)</th>-->
+<!--</tr>-->
+<!--{% for link in h5["C3 unclear text"]["samples"] %}-->
+<!--<tr>-->
+<!--<td>{{ link.text }}</td>-->
+<!--<td>{{ link.href }}</td>-->
+<!--</tr>-->
+<!--{% endfor %}-->
+<!--</table>-->
+<!--{% else %}-->
+<!--<p>No unclear link text samples found.</p>-->
+<!--{% endif %}-->
+
+<!--&lt;!&ndash; C4 samples &ndash;&gt;-->
+<!--<h4>C4 – Inputs without labels (examples)</h4>-->
+<!--{% if h5["C4 Unlabeled inputs"]["samples"] %}-->
+<!--<table class="samples-table">-->
+<!--<tr>-->
+<!--<th>#</th>-->
+<!--<th>Field name / type</th>-->
+<!--</tr>-->
+<!--{% for fld in h5["C4 Unlabeled inputs"]["samples"] %}-->
+<!--<tr>-->
+<!--<td>{{ fld.index }}</td>-->
+<!--<td>{{ fld.text }}</td>-->
+<!--</tr>-->
+<!--{% endfor %}-->
+<!--</table>-->
+<!--{% else %}-->
+<!--<p>No unlabelled inputs were detected.</p>-->
+<!--{% endif %}-->
+
+<!--&lt;!&ndash; C5 samples &ndash;&gt;-->
+<!--<h4>C5 – Forms without validation (examples)</h4>-->
+<!--{% if h5["C5 forms without validation"]["samples"] %}-->
+<!--<table class="samples-table">-->
+<!--<tr>-->
+<!--<th>Form action (truncated)</th>-->
+<!--<th># of inputs</th>-->
+<!--</tr>-->
+<!--{% for f in h5["C5 forms without validation"]["samples"] %}-->
+<!--<tr>-->
+<!--<td>{{ f.action }}</td>-->
+<!--<td>{{ f.inputs }}</td>-->
+<!--</tr>-->
+<!--{% endfor %}-->
+<!--</table>-->
+<!--{% else %}-->
+<!--<p>No forms missing validation were flagged.</p>-->
+<!--{% endif %}-->
+<!--</div>-->
+
+<!--{% endif %}-->
+
+<!--</body>-->
+<!--</html>-->
